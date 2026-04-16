@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zero Gravity</title>
+    <meta name="description" content="無重力ギミック" />
+    <style>
+      @font-face {
+        font-family: 'k8x12';
+        src: url('k8x12S.ttf') format('truetype');
+      }
+
+    </style>
+  </head>
+  <body>
+    <div class="board">
+      <h1 class="floating">Zero Gravity</h1>
+      <div class="panel">
+        <div class="box">
+          <p>
+            <span class="floating">google無重力って</span>
+            <span class="floating">ありましたよね？</span>
+        </p>
+          <p>
+            <span class="floating">よう</span>
+            <span class="floating">する</span>
+            <span class="floating">にあれ</span>
+            <span class="floating">のオマージュ</span>
+            <span class="floating">です。</span>
+            <span class="floating"></span>
+            <span class="floating"></span>
+            <span class="floating"></span>
+            <span class="floating"></span>
+            <span class="floating"></span>
+            <span class="floating"></span>
+            <span class="floating"></span>
+            <span class="floating"></span>
+            <span class="floating"></span>
+        </p>
+        </div>
+        <div class="box">
+          <p><span class="floating">ボタンを押すと無重力モードが開始します。</span></p>
+          <p><span class="floating"></span></p>
+        </div>
+        <div class="box">
+          <p><span class="floating"></span></p>
+          <p><span class="floating"></span></p>
+        </div>
+        <div class="box">
+          <a class="floating" href="index.html">Home</a><br />
+        </div>
+      </div>
+      <div class="hint"><span class="floating"></span></div>
+      <button id="startZeroG" type="button">無重力を起動</button>
+    </div>
+
+    <script>
+      (function() {
+        const CONFIG = {
+          gravity: 0.0,
+          airFriction: 0.999,
+          bounce: 0.9,
+          clickPower: 12,
+          dragPower: 0.2
+        };
+
+        let bodies = [];
+        let dragTarget = null;
+        const startButton = document.getElementById('startZeroG');
+
+        function startZeroGravity() {
+          if (window.__zeroGravityRunning) return;
+          window.__zeroGravityRunning = true;
+          startButton.disabled = true;
+          startButton.textContent = '無重力起動中';
+
+          const elements = [...document.querySelectorAll('.floating')]
+            .filter(el => {
+              const r = el.getBoundingClientRect();
+              return r.width > 20 && r.height > 20;
+            });
+
+          bodies = elements.map(el => {
+            const rect = el.getBoundingClientRect();
+            el.style.position = 'absolute';
+            el.style.left = rect.left + 'px';
+            el.style.top = rect.top + 'px';
+            el.style.willChange = 'transform';
+            el.style.transformOrigin = 'center center';
+            el.style.pointerEvents = 'auto';
+
+            return {
+              el,
+              x: rect.left,
+              y: rect.top,
+              w: rect.width,
+              h: rect.height,
+              vx: (Math.random() - 0.5) * 2,
+              vy: (Math.random() - 0.5) * 2,
+              rot: 0,
+              vr: (Math.random() - 0.5) * 2,
+              dragging: false
+            };
+          });
+
+          document.addEventListener('click', onClick);
+          document.addEventListener('mousedown', onMouseDown);
+          document.addEventListener('mouseup', onMouseUp);
+          document.addEventListener('mousemove', onMouseMove);
+
+          update();
+        }
+
+        function onClick(e) {
+          if (e.target === startButton) return;
+          bodies.forEach(b => {
+            const dx = b.x + b.w / 2 - e.clientX;
+            const dy = b.y + b.h / 2 - e.clientY;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            if (dist < 400) {
+              const force = (1 - dist / 400) * CONFIG.clickPower;
+              b.vx += dx / dist * force;
+              b.vy += dy / dist * force;
+              b.vr += (Math.random() - 0.5) * force;
+            }
+          });
+        }
+
+        function onMouseDown(e) {
+          dragTarget = bodies.find(b => e.target === b.el);
+          if (dragTarget) dragTarget.dragging = true;
+        }
+
+        function onMouseUp() {
+          if (dragTarget) dragTarget.dragging = false;
+          dragTarget = null;
+        }
+
+        function onMouseMove(e) {
+          if (!dragTarget) return;
+          dragTarget.vx += e.movementX * CONFIG.dragPower;
+          dragTarget.vy += e.movementY * CONFIG.dragPower;
+        }
+
+        function update() {
+          const W = window.innerWidth;
+          const H = window.innerHeight;
+
+          bodies.forEach(b => {
+            if (!b.dragging) {
+              b.vy += CONFIG.gravity;
+              b.vx *= CONFIG.airFriction;
+              b.vy *= CONFIG.airFriction;
+              b.x += b.vx;
+              b.y += b.vy;
+              b.rot += b.vr;
+            }
+
+            if (b.x < 0) {
+              b.x = 0;
+              b.vx *= -CONFIG.bounce;
+            }
+            if (b.x + b.w > W) {
+              b.x = W - b.w;
+              b.vx *= -CONFIG.bounce;
+            }
+            if (b.y < 0) {
+              b.y = 0;
+              b.vy *= -CONFIG.bounce;
+            }
+            if (b.y + b.h > H) {
+              b.y = H - b.h;
+              b.vy *= -CONFIG.bounce;
+            }
+
+            b.el.style.transform = `translate(${b.x}px, ${b.y}px) rotate(${b.rot}deg)`;
+          });
+
+          window.__zeroGravityRAF = requestAnimationFrame(update);
+        }
+
+        startButton.addEventListener('click', startZeroGravity);
+      })();
+    </script>
+  </body>
+</html>
